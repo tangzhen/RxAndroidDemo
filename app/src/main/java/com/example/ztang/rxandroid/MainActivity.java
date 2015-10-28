@@ -5,15 +5,19 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.Button;
+
+import java.util.List;
 
 import rx.Observable;
 import rx.Subscriber;
 import rx.functions.Action1;
 import rx.functions.Func1;
+
+import static java.util.Arrays.asList;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -50,13 +54,17 @@ public class MainActivity extends AppCompatActivity {
 
                 Subscriber<String> mySubscriber = new Subscriber<String>() {
                     @Override
-                    public void onNext(String s) { System.out.println(s); }
+                    public void onNext(String s) {
+                        System.out.println(s);
+                    }
 
                     @Override
-                    public void onCompleted() { }
+                    public void onCompleted() {
+                    }
 
                     @Override
-                    public void onError(Throwable e) { }
+                    public void onError(Throwable e) {
+                    }
                 };
 
                 myObservable.subscribe(mySubscriber);
@@ -125,6 +133,138 @@ public class MainActivity extends AppCompatActivity {
                 //      .subscribe(i -> System.out.println(Integer.toString(i)));
             }
         });
+
+        Button buttonTwo = (Button) findViewById(R.id.start_button_two);
+        buttonTwo.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // 1.
+                query("Hello, world!")
+                        .subscribe(new Action1<List<String>>() {
+                            @Override
+                            public void call(List<String> urls) {
+                                for (String url : urls) {
+                                    System.out.println(url);
+                                }
+                            }
+                        });
+
+                String[] urls = {"url1", "url2", "url3"};
+                Observable.from(urls)
+                        .subscribe(new Action1<String>() {
+                            @Override
+                            public void call(String url) {
+                                System.out.println(url);
+                            }
+                        });
+
+                // 2.
+                query("Hello, world!")
+                        .flatMap(new Func1<List<String>, Observable<String>>() {
+                            @Override
+                            public Observable<String> call(List<String> urls) {
+                                return Observable.from(urls);
+                            }
+                        })
+                        .subscribe(new Action1<String>() {
+                            @Override
+                            public void call(String s) {
+                                System.out.println(s);
+                            }
+                        });
+
+                // Java 8
+                // query("Hello, world!")
+                //       .flatMap(urls -> Observable.from(urls))
+                //       .subscribe(url -> System.out.println(url));
+
+
+                // 3.
+                query("Hello, world!")
+                        .flatMap(new Func1<List<String>, Observable<String>>() {
+                            @Override
+                            public Observable<String> call(List<String> urls) {
+                                return Observable.from(urls);
+                            }
+                        })
+                        .flatMap(new Func1<String, Observable<String>>() {
+                            @Override
+                            public Observable<String> call(String url) {
+                                return getTitle(url);
+                            }
+                        })
+                        .subscribe(new Action1<String>() {
+                            @Override
+                            public void call(String s) {
+                                System.out.println(s);
+                            }
+                        });
+
+                // 4.
+                query("Hello, world!")
+                        .flatMap(new Func1<List<String>, Observable<String>>() {
+                            @Override
+                            public Observable<String> call(List<String> urls) {
+                                return Observable.from(urls);
+                            }
+                        })
+                        .flatMap(new Func1<String, Observable<String>>() {
+                            @Override
+                            public Observable<String> call(String url) {
+                                return getTitle(url);
+                            }
+                        })
+                        .filter(new Func1<String, Boolean>() {
+                            @Override
+                            public Boolean call(String title) {
+                                return title != null;
+                            }
+                        })
+                        .take(2)
+                        .doOnNext(new Action1<String>() {
+                            @Override
+                            public void call(String title) {
+                                saveTitle(title);
+                            }
+                        })
+                        .subscribe(new Action1<String>() {
+                            @Override
+                            public void call(String s) {
+                                System.out.println(s);
+                            }
+                        });
+            }
+        });
+    }
+
+    private void saveTitle(String title) {
+        System.out.println("save title");
+    }
+
+    Observable<List<String>> query(String text) {
+        return Observable.create(
+                new Observable.OnSubscribe<List<String>>() {
+                    @Override
+                    public void call(Subscriber<? super List<String>> subscriber) {
+                        List<String> strings = asList("foo", "bar", "baz");
+
+                        subscriber.onNext(strings);
+                        subscriber.onCompleted();
+                    }
+                }
+        );
+    }
+
+    Observable<String> getTitle(String URL) {
+        return Observable.create(
+                new Observable.OnSubscribe<String>() {
+                    @Override
+                    public void call(Subscriber<? super String> subscriber) {
+                        subscriber.onNext("Title");
+                        subscriber.onCompleted();
+                    }
+                }
+        );
     }
 
     @Override
