@@ -14,6 +14,7 @@ import java.util.List;
 
 import rx.Observable;
 import rx.Subscriber;
+import rx.Subscription;
 import rx.functions.Action1;
 import rx.functions.Func1;
 
@@ -235,6 +236,64 @@ public class MainActivity extends AppCompatActivity {
                         });
             }
         });
+
+        Button buttonThree = (Button) findViewById(R.id.start_button_three);
+        buttonThree.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // 1.
+                Subscription subscribe = Observable.just("Hello, world!")
+                        .map(new Func1<String, String>() {
+                            @Override
+                            public String call(String s) {
+                                return potentialException(s);
+                            }
+                        })
+                        .map(new Func1<String, String>() {
+                            @Override
+                            public String call(String s) {
+                                return anotherPotentialException(s);
+                            }
+                        })
+                        .subscribe(new Subscriber<String>() {
+                            @Override
+                            public void onNext(String s) {
+                                System.out.println(s);
+                            }
+
+                            @Override
+                            public void onCompleted() {
+                                System.out.println("Completed!");
+                            }
+
+                            @Override
+                            public void onError(Throwable e) {
+                                System.out.println("Ouch!");
+                            }
+                        });
+
+                // 2.
+                // myObservableServices.retrieveImage(url)
+                //        .subscribeOn(Schedulers.io())
+                //        .observeOn(AndroidSchedulers.mainThread())
+                //        .subscribe(bitmap -> myImageView.setImageBitmap(bitmap));
+
+                subscribe.unsubscribe();
+                System.out.println("Unsubscribed=" + subscribe.isUnsubscribed());
+            }
+        });
+    }
+
+    private String anotherPotentialException(String s) {
+        if (true) {
+            throw new RuntimeException("big boom");
+        } else {
+            return "BBB";
+        }
+    }
+
+    private String potentialException(String s) {
+        return "ABC";
     }
 
     private void saveTitle(String title) {
