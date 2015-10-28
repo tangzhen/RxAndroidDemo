@@ -1,26 +1,108 @@
 package com.example.ztang.rxandroid;
 
+import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
-import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
+
+import com.trello.rxlifecycle.ActivityEvent;
+import com.trello.rxlifecycle.components.support.RxAppCompatActivity;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import rx.Observable;
 import rx.Subscriber;
 import rx.Subscription;
+import rx.android.schedulers.AndroidSchedulers;
+import rx.functions.Action0;
 import rx.functions.Action1;
 import rx.functions.Func1;
+import rx.schedulers.Schedulers;
 
 import static java.util.Arrays.asList;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends RxAppCompatActivity {
+    GithubService githubService;
+
+    private static final String TAG = "RxLifecycle";
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+
+        Log.d(TAG, "onStart()");
+
+        // Using automatic unsubscription, this should determine that the correct time to
+        // unsubscribe is onStop (the opposite of onStart).
+        Observable.interval(1, TimeUnit.SECONDS)
+                .doOnUnsubscribe(new Action0() {
+                    @Override
+                    public void call() {
+                        Log.i(TAG, "Unsubscribing subscription from onStart()");
+                    }
+                })
+                .compose(this.<Long>bindToLifecycle())
+                .subscribe(new Action1<Long>() {
+                    @Override
+                    public void call(Long num) {
+                        Log.i(TAG, "Started in onStart(), running until in onStop(): " + num);
+                    }
+                });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        Log.d(TAG, "onResume()");
+
+        // `this.<Long>` is necessary if you're compiling on JDK7 or below.
+        //
+        // If you're using JDK8+, then you can safely remove it.
+        Observable.interval(1, TimeUnit.SECONDS)
+                .doOnUnsubscribe(new Action0() {
+                    @Override
+                    public void call() {
+                        Log.i(TAG, "Unsubscribing subscription from onResume()");
+                    }
+                })
+                .compose(this.<Long>bindUntilEvent(ActivityEvent.DESTROY))
+                .subscribe(new Action1<Long>() {
+                    @Override
+                    public void call(Long num) {
+                        Log.i(TAG, "Started in onResume(), running until in onDestroy(): " + num);
+                    }
+                });
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+
+        Log.d(TAG, "onPause()");
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+
+        Log.d(TAG, "onStop()");
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+
+        Log.d(TAG, "onDestroy()");
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -282,6 +364,43 @@ public class MainActivity extends AppCompatActivity {
                 System.out.println("Unsubscribed=" + subscribe.isUnsubscribed());
             }
         });
+
+        final ImageView myImageView = (ImageView) findViewById(R.id.image_show);
+
+        Button buttonAndroid = (Button)findViewById(R.id.start_button_android);
+        buttonAndroid.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                githubService.getImage("")
+                        .subscribeOn(Schedulers.io())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(new Action1<Bitmap>() {
+                            @Override
+                            public void call(Bitmap bitmap) {
+                                myImageView.setImageBitmap(bitmap);
+                            }
+                        });
+
+
+            }
+        });
+
+        Log.d(TAG, "onCreate()");
+        // Specifically bind this until onPause()
+        Observable.interval(1, TimeUnit.SECONDS)
+                .doOnUnsubscribe(new Action0() {
+                    @Override
+                    public void call() {
+                        Log.i(TAG, "Unsubscribing subscription from onCreate()");
+                    }
+                })
+                .compose(this.<Long>bindUntilEvent(ActivityEvent.PAUSE))
+                .subscribe(new Action1<Long>() {
+                    @Override
+                    public void call(Long num) {
+                        Log.i(TAG, "Started in onCreate(), running until onPause(): " + num);
+                    }
+                });
     }
 
     private String anotherPotentialException(String s) {

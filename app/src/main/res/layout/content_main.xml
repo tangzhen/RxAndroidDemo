@@ -28,4 +28,15 @@
         android:layout_height="50dp"
         android:text="Start Part 3(Error handle)"/>
 
+    <Button
+        android:id="@+id/start_button_android"
+        android:layout_width="fill_parent"
+        android:layout_height="50dp"
+        android:text="Start Part 4(Android)"/>
+
+    <ImageView
+        android:id="@+id/image_show"
+        android:layout_width="fill_parent"
+        android:layout_height="100dp" />
+
 </LinearLayout>
